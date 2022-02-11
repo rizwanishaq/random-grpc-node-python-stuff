@@ -1,0 +1,169 @@
+name: "riva-asr"
+platform: "ensemble"
+max_batch_size: 64
+input {
+  name: "AUDIO_SIGNAL"
+  data_type: TYPE_FP32
+  dims: [-1]
+}
+input {
+  name: "SAMPLE_RATE"
+  data_type: TYPE_UINT32
+  dims: [1]
+}
+output {
+  name: "AUDIO_FEATURES"
+  data_type: TYPE_FP32
+  dims: [64, -1]
+}
+output {
+  name: "AUDIO_PROCESSED"
+  data_type: TYPE_FP32
+  dims: [1]
+}
+output {
+  name: "CHARACTER_PROBABILITIES"
+  data_type: TYPE_FP32
+  dims: [126, 29]
+}
+output {
+  name: "voiced"
+  data_type: TYPE_INT32
+  dims: [1]
+}
+parameters {
+  key: "chunk_size"
+  value {
+    string_value: "0.1"
+  }
+}
+parameters {
+  key: "compute_timestamps"
+  value {
+    string_value: "True"
+  }
+}
+parameters {
+  key: "decoder_type"
+  value {
+    string_value: "greedy"
+  }
+}
+parameters {
+  key: "language_code"
+  value {
+    string_value: "en-US"
+  }
+}
+parameters {
+  key: "lattice_beam"
+  value {
+    string_value: "5"
+  }
+}
+parameters {
+  key: "left_padding_size"
+  value {
+    string_value: "1.2"
+  }
+}
+parameters {
+  key: "max_supported_transcripts"
+  value {
+    string_value: "1"
+  }
+}
+parameters {
+  key: "model_family"
+  value {
+    string_value: "riva"
+  }
+}
+parameters {
+  key: "ms_per_timestep"
+  value {
+    string_value: "20"
+  }
+}
+parameters {
+  key: "offline"
+  value {
+    string_value: "False"
+  }
+}
+parameters {
+  key: "right_padding_size"
+  value {
+    string_value: "1.2"
+  }
+}
+parameters {
+  key: "sample_rate"
+  value {
+    string_value: "16000"
+  }
+}
+parameters {
+  key: "streaming"
+  value {
+    string_value: "True"
+  }
+}
+parameters {
+  key: "type"
+  value {
+    string_value: "online"
+  }
+}
+parameters {
+  key: "vad"
+  value {
+    string_value: "True"
+  }
+}
+ensemble_scheduling {
+  step {
+    model_name: "riva-asr-feature-extractor-streaming"
+    model_version: 1
+    input_map {
+      key: "AUDIO_SIGNAL"
+      value: "AUDIO_SIGNAL"
+    }
+    input_map {
+      key: "SAMPLE_RATE"
+      value: "SAMPLE_RATE"
+    }
+    output_map {
+      key: "AUDIO_FEATURES"
+      value: "AUDIO_FEATURES"
+    }
+    output_map {
+      key: "AUDIO_PROCESSED"
+      value: "AUDIO_PROCESSED"
+    }
+  }
+  step {
+    model_name: "riva-trt-riva-asr-am-streaming"
+    model_version: 1
+    input_map {
+      key: "audio_signal"
+      value: "AUDIO_FEATURES"
+    }
+    output_map {
+      key: "logprobs"
+      value: "CHARACTER_PROBABILITIES"
+    }
+  }
+  step {
+    model_name: "no_context_vad"
+    model_version: 1
+    input_map {
+      key: "CLASS_LOGITS"
+      value: "CHARACTER_PROBABILITIES"
+    }
+    output_map {
+      key: "voiced"
+      value: "voiced"
+    }
+  }
+}
